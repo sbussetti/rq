@@ -11,7 +11,8 @@ from multiprocessing import Process
 
 from tests import RQTestCase, slow
 from tests.fixtures import (create_file, create_file_after_timeout,
-                            div_by_zero, do_nothing, say_hello, say_pid)
+                            div_by_zero, do_nothing, say_hello, say_pid,
+                            return_unicode, return_bytestring)
 from tests.helpers import strip_microseconds
 
 from rq import get_failed_queue, Queue, SimpleWorker, Worker
@@ -544,6 +545,37 @@ class TestWorker(RQTestCase):
         worker.work(burst=True)
         self.assertEqual(self.testconn.zcard(registry.key), 0)
 
+    def test_worker_logs_success(self):
+        """Worker can log success response of various jobs"""
+        q = Queue()
+        w = Worker([q])
+
+        # ascii response
+        job = q.enqueue(say_hello)
+        w.prepare_job_execution(job)
+        try:
+            success = w.perform_job(job, q)
+        except UnicodeEncodeError:
+            self.fail('perform_job raised UnicodeEncodeError unexpectedly')
+        self.assertTrue(success)
+
+        # bytestring response
+        job = q.enqueue(return_bytestring)
+        w.prepare_job_execution(job)
+        try:
+            success = w.perform_job(job, q)
+        except UnicodeDecodeError:
+            self.fail('perform_job raised UnicodeDecodeError unexpectedly')
+        self.assertTrue(success)
+
+        # unicode response
+        job = q.enqueue(return_unicode)
+        w.prepare_job_execution(job)
+        try:
+            success = w.perform_job(job, q)
+        except UnicodeEncodeError:
+            self.fail('perform_job raised UnicodeEncodeError unexpectedly')
+        self.assertTrue(success)
 
 def kill_worker(pid, double_kill):
     # wait for the worker to be started over on the main process

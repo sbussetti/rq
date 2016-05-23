@@ -101,3 +101,11 @@ def black_hole(job, *exc_info):
 def long_running_job(timeout=10):
     time.sleep(timeout)
     return 'Done sleeping...'
+
+
+def return_unicode():
+    return u'Dönë wörkïng'
+
+
+def return_bytestring():
+    return u'Dönë wörkïng'.encode('utf-8')
